@@ -9,9 +9,10 @@ import Head from "next/head";
 import { api } from "~/utils/api";
 
 export default function Home() {
-  const hello = api.post.hello.useQuery({ text: "from tRPC" });
-
   const user = useUser();
+
+  const { data } = api.post.getAll.useQuery();
+
   return (
     <>
       <Head>
@@ -25,6 +26,9 @@ export default function Home() {
           {!!user.isSignedIn && <SignOutButton />}
         </div>
         {/* <UserButton afterSignOutUrl="/" /> */}
+        <div>
+          {data?.map((post) => <div key={post.id}>{post.content}</div>)}
+        </div>
       </main>
     </>
   );
