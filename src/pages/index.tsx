@@ -1,7 +1,12 @@
 import { SignInButton, useUser } from "@clerk/nextjs";
 import Head from "next/head";
 
-import { api } from "~/utils/api";
+import { RouterOutputs, api } from "~/utils/api";
+
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
   const { user } = useUser();
@@ -18,6 +23,26 @@ const CreatePostWizard = () => {
         placeholder="type some emojis!"
         className="grow bg-transparent outline-none"
       />
+    </div>
+  );
+};
+
+type PostWithUser = RouterOutputs["post"]["getAll"][number];
+
+const PostView = (props: PostWithUser) => {
+  const { post, author } = props;
+  return (
+    <div className="flex gap-6 border-b border-slate-400 p-4" key={post.id}>
+      <img src={author?.imageUrl} className="my-auto h-14 w-14" />
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2 text-slate-300">
+          <span>{`@${author.username}`}</span>
+          <span className="font-thin opacity-70">{`• ${dayjs(
+            post.createdAt,
+          ).fromNow()}`}</span>
+        </div>
+        <span className="text-lg">{post.content}</span>
+      </div>
     </div>
   );
 };
@@ -48,18 +73,9 @@ export default function Home() {
             )}
             {!!user.isSignedIn && <CreatePostWizard />}
           </div>
-          <div className="">
-            {[...data, ...data]?.map(({ post, author }) => (
-              <div
-                className="flex gap-6 border-b border-slate-400 p-8"
-                key={post.id}
-              >
-                <img src={author?.imageUrl} className="h-8 w-8" />
-                <div className="flex items-center gap-3">
-                  <span>{post.content}</span>
-                  <span>{author?.username}</span>
-                </div>
-              </div>
+          <div>
+            {[...data, ...data]?.map((postWithUser) => (
+              <PostView {...postWithUser} key={postWithUser.post.id} />
             ))}
           </div>
         </div>
