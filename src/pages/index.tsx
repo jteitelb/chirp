@@ -1,6 +1,7 @@
 import { SignInButton, useUser } from "@clerk/nextjs";
 import Head from "next/head";
 import Image from "next/image";
+import { LoadingPage } from "~/components/spinner";
 
 import { RouterOutputs, api } from "~/utils/api";
 
@@ -56,14 +57,29 @@ const PostView = (props: PostWithUser) => {
   );
 };
 
-export default function Home() {
-  const user = useUser();
-  console.log(user);
+const Feed = () => {
+  const { data, isLoading: postsLoading } = api.post.getAll.useQuery();
 
-  const { data, isLoading } = api.post.getAll.useQuery();
-
-  if (isLoading) return <div>Loading...</div>;
+  if (postsLoading) return <LoadingPage />;
   if (!data) return <div>Something went wrong</div>;
+
+  return (
+    <div>
+      {[...data, ...data]?.map((postWithUser) => (
+        <PostView {...postWithUser} key={postWithUser.post.id} />
+      ))}
+    </div>
+  );
+};
+
+export default function Home() {
+  const { isLoaded: userLoaded, isSignedIn } = useUser();
+
+  // start fetching asap
+  api.post.getAll.useQuery();
+
+  // return empty div until user is loaded
+  if (!userLoaded) return <div />;
 
   return (
     <>
@@ -75,18 +91,14 @@ export default function Home() {
       <main className="flex h-screen justify-center">
         <div className="h-full w-full border-x border-slate-400 md:max-w-2xl">
           <div className="border-b border-slate-400 p-4">
-            {!user.isSignedIn && (
+            {!isSignedIn && (
               <div className="flex justify-center">
                 <SignInButton />
               </div>
             )}
-            {!!user.isSignedIn && <CreatePostWizard />}
+            {isSignedIn && <CreatePostWizard />}
           </div>
-          <div>
-            {[...data, ...data]?.map((postWithUser) => (
-              <PostView {...postWithUser} key={postWithUser.post.id} />
-            ))}
-          </div>
+          <Feed />
         </div>
       </main>
     </>
