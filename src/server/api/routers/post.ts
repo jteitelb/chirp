@@ -2,7 +2,11 @@ import { User, clerkClient } from "@clerk/nextjs/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  privateProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
 
 const filterUserForClient = (user: User) => ({
   id: user.id,
@@ -19,19 +23,6 @@ export const postRouter = createTRPCRouter({
       };
     }),
 
-  // create: publicProcedure
-  //   .input(z.object({ name: z.string().min(1) }))
-  //   .mutation(async ({ ctx, input }) => {
-  //     // simulate a slow db call
-  //     await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  //     return ctx.db.post.create({
-  //       data: {
-  //         name: input.name,
-  //       },
-  //     });
-  //   }),
-
   getLatest: publicProcedure.query(({ ctx }) => {
     return ctx.db.post.findFirst({
       orderBy: { createdAt: "desc" },
@@ -39,7 +30,10 @@ export const postRouter = createTRPCRouter({
   }),
 
   getAll: publicProcedure.query(async ({ ctx }) => {
-    const posts = await ctx.db.post.findMany({ take: 100 });
+    const posts = await ctx.db.post.findMany({
+      take: 100,
+      orderBy: { createdAt: "desc" },
+    });
     const users = (
       await clerkClient.users.getUserList({
         userId: posts.map((post) => post.authorId),
@@ -64,4 +58,22 @@ export const postRouter = createTRPCRouter({
       };
     });
   }),
+
+  create: privateProcedure
+    .input(
+      z.object({
+        content: z.string().min(1).max(280),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const authorId = ctx.userId;
+      const post = await ctx.db.post.create({
+        data: {
+          content: input.content,
+          authorId: authorId,
+        },
+      });
+
+      return post;
+    }),
 });
